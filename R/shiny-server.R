@@ -627,8 +627,8 @@ makeInteractiveComplexHeatmap = function(input, output, session, ht_list,
 			req(heatmap_initialized())
 
 			updateCheckboxInput(session, qq("@{heatmap_id}_remove_empty_checkbox"), value = FALSE)
-			
-			if(input[[qq("@{heatmap_id}_keyword")]] == "") {
+			panel_type = input[[qq("@{heatmap_id}_search_panel_type")]]
+			if(input[[qq("@{heatmap_id}_keyword")]] == "" & !is_valid_panel_type(panel_type)) {
 				output[[qq("@{heatmap_id}_sub_heatmap")]] = renderPlot({
 					grid.newpage()
 					grid.text("Query keyword is empty.", 0.5, 0.5, gp = gpar(fontsize = 14, col = "red"))
@@ -693,11 +693,11 @@ makeInteractiveComplexHeatmap = function(input, output, session, ht_list,
 			}
 
 			if(where == 1) {
-				selected( selectByLabels(hl, row_keywords = keywords, keyword_is_regexpr = is_regexpr, include_annotation = TRUE, heatmap = sht, all = length(extend)) )
+				selected( selectByLabels(hl, row_keywords = keywords, keyword_is_regexpr = is_regexpr, panel_type = panel_type, include_annotation = TRUE, heatmap = sht, all = length(extend)) )
 			} else if(where == 2) {
-				selected( selectByLabels(hl, column_keywords = keywords, keyword_is_regexpr = is_regexpr, include_annotation = TRUE, heatmap = sht, all = length(extend)) )
+				selected( selectByLabels(hl, column_keywords = keywords, keyword_is_regexpr = is_regexpr, panel_type = panel_type, include_annotation = TRUE, heatmap = sht, all = length(extend)) )
 			} else {
-				selected( selectByLabels(hl, row_keywords = keywords, column_keywords = keywords, keyword_is_regexpr = is_regexpr, include_annotation = TRUE, heatmap = sht, all = length(extend)) )
+				selected( selectByLabels(hl, row_keywords = keywords, column_keywords = keywords, keyword_is_regexpr = is_regexpr, panel_type = panel_type, include_annotation = TRUE, heatmap = sht, all = length(extend)) )
 			}
 			selected_copy( selected() )
 

@@ -744,207 +744,240 @@ seek_root_vp = function() {
 	upViewport(1)
 }
 
+# Check if panel type is valid value and not "All"
+is_valid_panel_type <- function(panel_type) {
+  return(!is.null(panel_type) & panel_type != "All")
+}
+
 # given a vector of row keywords or column keywords, 
 selectByLabels = function(ht_list = get_last_ht(), row_keywords = NULL, column_keywords = NULL, 
-	keyword_is_regexpr = FALSE, heatmap = NULL, 
-	all = TRUE, include_annotation = FALSE) {
-
-	if(inherits(ht_list, "Heatmap")) {
-		stop_wrap("`ht_list` should be returned by `draw()`.")
-	}
-
-	if(!ht_list@layout$initialized) {
-		stop_wrap("`ht_list` should be returned by `draw()`.")
-	}
-
-	df = NULL
-	if(!is.null(row_keywords) && !is.null(column_keywords)) {
-		if(length(heatmap) > 1) {
-			stop_wrap("If `row_keywords` and `column_keywords` are both set, `heatmap` should only be NULL or only contain one heatmap.")
-		}
-		if(length(heatmap) == 0) {
-			which_heatmap = which(sapply(ht_list@ht_list, function(x) inherits(x, "Heatmap")))
-			if(length(which_heatmap) != 1) {
-				stop_wrap("If `row_keywords` and `column_keywords` are both set, and `heatmap` is NULL, `ht_list` should only contain one heatmap.")
-			}
-
-			heatmap = names(ht_list@ht_list)[which_heatmap]
-		}
-
-		ht_name = heatmap
-		ht = ht_list@ht_list[[heatmap]]
-		row_labels = ht@row_names_param$label
-		column_labels = ht@column_names_param$label
-		if(!is.null(row_labels)) {
-			for(k in seq_along(row_keywords)) {
-				if(keyword_is_regexpr) {
-					ri = grep(row_keywords[k], row_labels)
-				} else {
-					ri = which(row_labels %in% row_keywords[k])
-				}
-				if(length(ri)) {
-					for(i_slice in seq_along(ht@row_order_list)) {
-						if(any(ht@row_order_list[[i_slice]] %in% ri)) {
-
-							if(!is.null(column_labels)) {
-								for(k in seq_along(column_keywords)) {
-									if(keyword_is_regexpr) {
-										ci = grep(column_keywords[k], column_labels)
-									} else {
-										ci = which(column_labels %in% column_keywords[k])
-									}
-									if(length(ci)) {
-										for(j_slice in seq_along(ht@column_order_list)) {
-											if(any(ht@column_order_list[[j_slice]] %in% ci)) {
-												for(i_slice in seq_along(ht@row_order_list)) {
-														df = rbind(df, S4Vectors::DataFrame(heatmap = ht_name, 
-																				           slice = qq("@{ht_name}_heatmap_body_@{i_slice}_@{j_slice}"), 
-																				           row_slice = i_slice,
-																			               column_slice = j_slice,
-																				           row_index = IntegerList(intersect(ht@row_order_list[[i_slice]], ri)), 
-																				           column_index = IntegerList(intersect(ht@column_order_list[[j_slice]], ci))))
-												}
-											}
-										}
-									}
-								}
-							}
-						}
-					}
-				}
-			}
-		}	
-		if(is.null(df)) return(df)
-	} else {
-
-		for(i in seq_along(ht_list@ht_list)) {
-			ht_name = ht_list@ht_list[[i]]@name
-			ht = ht_list@ht_list[[ht_name]]
-			if(inherits(ht, "Heatmap")) {
-				if(!is.null(heatmap)) {
-					if(!ht_name %in% heatmap) next
-				}
-				row_labels = ht@row_names_param$label
-				column_labels = ht@column_names_param$label
-				if(!is.null(row_keywords)) {
-					if(!is.null(row_labels)) {
-						for(k in seq_along(row_keywords)) {
-							if(keyword_is_regexpr) {
-								ri = grep(row_keywords[k], row_labels)
-							} else {
-								ri = which(row_labels %in% row_keywords[k])
-							}
-							if(length(ri)) {
-								for(i_slice in seq_along(ht@row_order_list)) {
-									if(any(ht@row_order_list[[i_slice]] %in% ri)) {
-										for(j_slice in seq_along(ht@column_order_list)) {
-											df = rbind(df, S4Vectors::DataFrame(heatmap = ht_name, 
-																	           slice = qq("@{ht_name}_heatmap_body_@{i_slice}_@{j_slice}"), 
-																	           row_slice = i_slice,
-																               column_slice = j_slice,
-																	           row_index = IntegerList(intersect(ht@row_order_list[[i_slice]], ri)), 
-																	           column_index = IntegerList(ht@column_order_list[[j_slice]])))
-										}
-									}
-								}
-							}
-						}
-					}
-				} else if(!is.null(column_keywords)) {
-					if(!is.null(column_labels)) {
-						for(k in seq_along(column_keywords)) {
-							if(keyword_is_regexpr) {
-								ci = grep(column_keywords[k], column_labels)
-							} else {
-								ci = which(column_labels %in% column_keywords[k])
-							}
-							if(length(ci)) {
-								for(j_slice in seq_along(ht@column_order_list)) {
-									if(any(ht@column_order_list[[j_slice]] %in% ci)) {
-										for(i_slice in seq_along(ht@row_order_list)) {
-											df = rbind(df, S4Vectors::DataFrame(heatmap = ht_name, 
-																	           slice = qq("@{ht_name}_heatmap_body_@{i_slice}_@{j_slice}"), 
-																	           row_slice = i_slice,
-																               column_slice = j_slice,
-																	           row_index = IntegerList(ht@row_order_list[[j_slice]]), 
-																	           column_index = IntegerList(intersect(ht@column_order_list[[j_slice]], ci))))
-										}
-									}
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-
-		if(is.null(df)) return(df)
-
-		ndf = nrow(df)
-		if(all && !is.null(df)) {
-			for(i in seq_along(ht_list@ht_list)) {
-				ht_name = ht_list@ht_list[[i]]@name
-				ht = ht_list@ht_list[[ht_name]]
-				if(inherits(ht, "Heatmap")) {
-					for(idf in seq_len(ndf)) {
-						if(!ht_name %in% df$heatmap[idf]) {
-							if(ht_list@direction == "horizontal") {
-								if(!is.null(row_keywords)) {
-									for(j_slice in seq_along(ht@column_order_list)) {
-										i_slice = df$row_slice[idf]
-										df = rbind(df, S4Vectors::DataFrame(heatmap = ht_name, 
-																           slice = qq("@{ht_name}_heatmap_body_@{i_slice}_@{j_slice}"), 
-																           row_slice = i_slice,
-															               column_slice = j_slice,
-																           row_index = df$row_index[idf], 
-																           column_index = IntegerList(ht@column_order_list[[j_slice]])))
-									}
-								}
-							} else {
-								if(!is.null(column_keywords)) {
-									for(i_slice in seq_along(ht@row_order_list)) {
-										j_slice = df$column_slice[idf]
-										df = rbind(df, S4Vectors::DataFrame(heatmap = ht_name, 
-																           slice = qq("@{ht_name}_heatmap_body_@{i_slice}_@{j_slice}"), 
-																           row_slice = i_slice,
-															               column_slice = j_slice,
-																           row_index = IntegerList(ht@row_order_list[[j_slice]]), 
-																           column_index = df$column_index[idf]))
-									}
-								}
-							}
-						}
-					}
-				} else {
-					if(include_annotation) {
-						df = rbind(df, S4Vectors::DataFrame(heatmap = ht_name, 
-												           slice = NA, 
-												           row_slice = NA,
-											               column_slice = NA,
-												           row_index = IntegerList(integer(0)), 
-												           column_index = IntegerList(integer(0))))
-					}
-				}
-			}
-		}
-	}
-	df = reformat_df(df, ht_list)
-
-	df$row_label = rep(CharacterList(character(0)), nrow(df))
-	df$column_label = rep(CharacterList(character(0)), nrow(df))
-	for(i in seq_len(nrow(df))) {
-		ht = ht_list@ht_list[[df[i, "heatmap"]]]
-		row_index = df[, "row_index"][[i]]
-		column_index = df[, "column_index"][[i]]
-		row_label = rownames(ht@matrix)[row_index]
-		column_label = colnames(ht@matrix)[column_index]
-		if(is.null(row_label)) row_label = rep(NA_character_, length(row_index))
-		if(is.null(column_label)) column_label = rep(NA_character_, length(column_index))
-
-		df$row_label[[i]] = row_label
-		df$column_label[[i]] = column_label
-	}
-	df
+                          keyword_is_regexpr = FALSE, panel_type = NULL, heatmap = NULL, 
+                          all = TRUE, include_annotation = FALSE) {
+  
+  if(inherits(ht_list, "Heatmap")) {
+    stop_wrap("`ht_list` should be returned by `draw()`.")
+  }
+  
+  if(!ht_list@layout$initialized) {
+    stop_wrap("`ht_list` should be returned by `draw()`.")
+  }
+  
+  df = NULL
+  panel_type_index = vector()
+  if(!is.null(row_keywords) & (!is.null(column_keywords) | is_valid_panel_type(panel_type))) {
+    if(length(heatmap) > 1) {
+      stop_wrap("If `row_keywords` and `column_keywords` are both set, `heatmap` should only be NULL or only contain one heatmap.")
+    }
+    if(length(heatmap) == 0) {
+      which_heatmap = which(sapply(ht_list@ht_list, function(x) inherits(x, "Heatmap")))
+      if(length(which_heatmap) != 1) {
+        stop_wrap("If `row_keywords` and `column_keywords` are both set, and `heatmap` is NULL, `ht_list` should only contain one heatmap.")
+      }
+      
+      heatmap = names(ht_list@ht_list)[which_heatmap]
+    }
+    
+    ht_name = heatmap
+    ht = ht_list@ht_list[[heatmap]]
+    row_labels = ht@row_names_param$label
+    column_labels = ht@column_names_param$label
+    
+    if (is_valid_panel_type(panel_type)) {
+      panel_type_index = grep(sprintf("\\(%s\\)", panel_type), column_labels)
+    }
+    
+    if(!is.null(row_labels)) {
+      for(k in seq_along(row_keywords)) {
+        if(keyword_is_regexpr) {
+          ri = grep(row_keywords[k], row_labels)
+        } else {
+          ri = which(row_labels %in% row_keywords[k])
+        }
+        if(length(ri)) {
+          for(i_slice in seq_along(ht@row_order_list)) {
+            if(any(ht@row_order_list[[i_slice]] %in% ri)) {
+              
+              if(!is.null(column_labels)) {
+                ci = vector()
+                if(is.null(column_keywords)){
+                  column_keywords = c(sprintf("(%s)", panel_type))
+                  ci = panel_type_index
+                }
+                
+                for(k in seq_along(column_keywords)) {
+                  if (!any(ci)) {
+                    if(keyword_is_regexpr) {
+                      ci = grep(column_keywords[k], column_labels)
+                    } else {
+                      ci = which(column_labels %in% column_keywords[k])
+                    }
+                  }
+                  
+                  if (any(panel_type_index)) {
+                    ci = intersect(ci, panel_type_index)
+                  } 
+                  
+                  if(length(ci)) {
+                    for(j_slice in seq_along(ht@column_order_list)) {
+                      if(any(ht@column_order_list[[j_slice]] %in% ci)) {
+                        for(i_slice in seq_along(ht@row_order_list)) { 
+                          df = rbind(df, S4Vectors::DataFrame(heatmap = ht_name, 
+                                                              slice = qq("@{ht_name}_heatmap_body_@{i_slice}_@{j_slice}"), 
+                                                              row_slice = i_slice,
+                                                              column_slice = j_slice,
+                                                              row_index = IntegerList(intersect(ht@row_order_list[[i_slice]], ri)), 
+                                                              column_index = IntegerList(intersect(ht@column_order_list[[j_slice]], ci))))
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }	
+    if(is.null(df)) return(df)
+  } else {
+    
+    for(i in seq_along(ht_list@ht_list)) {
+      ht_name = ht_list@ht_list[[i]]@name
+      ht = ht_list@ht_list[[ht_name]]
+      if(inherits(ht, "Heatmap")) {
+        if(!is.null(heatmap)) {
+          if(!ht_name %in% heatmap) next
+        }
+        row_labels = ht@row_names_param$label
+        column_labels = ht@column_names_param$label
+        if(!is.null(row_keywords)) {
+          if(!is.null(row_labels)) {
+            for(k in seq_along(row_keywords)) {
+              if(keyword_is_regexpr) {
+                ri = grep(row_keywords[k], row_labels)
+              } else {
+                ri = which(row_labels %in% row_keywords[k])
+              }
+              if(length(ri)) {
+                for(i_slice in seq_along(ht@row_order_list)) {
+                  if(any(ht@row_order_list[[i_slice]] %in% ri)) {
+                    for(j_slice in seq_along(ht@column_order_list)) {
+                      df = rbind(df, S4Vectors::DataFrame(heatmap = ht_name, 
+                                                          slice = qq("@{ht_name}_heatmap_body_@{i_slice}_@{j_slice}"), 
+                                                          row_slice = i_slice,
+                                                          column_slice = j_slice,
+                                                          row_index = IntegerList(intersect(ht@row_order_list[[i_slice]], ri)), 
+                                                          column_index = IntegerList(ht@column_order_list[[j_slice]])))
+                    }
+                  }
+                }
+              }
+            }
+          }
+        } else if(!is.null(column_keywords)) {
+          if(!is.null(column_labels)) {
+            if (is_valid_panel_type(panel_type)) {
+              panel_type_index = grep(sprintf("\\(%s\\)", panel_type), column_labels)
+            }
+            
+            for(k in seq_along(column_keywords)) {
+              if(keyword_is_regexpr) {
+                ci = grep(column_keywords[k], column_labels)
+              } else {
+                ci = which(column_labels %in% column_keywords[k])
+              }
+              
+              if (any(panel_type_index)) {
+                ci = intersect(ci, panel_type_index)
+              } 
+              
+              if(length(ci)) {
+                for(j_slice in seq_along(ht@column_order_list)) {
+                  if(any(ht@column_order_list[[j_slice]] %in% ci)) {
+                    for(i_slice in seq_along(ht@row_order_list)) {
+                      df = rbind(df, S4Vectors::DataFrame(heatmap = ht_name, 
+                                                          slice = qq("@{ht_name}_heatmap_body_@{i_slice}_@{j_slice}"), 
+                                                          row_slice = i_slice,
+                                                          column_slice = j_slice,
+                                                          row_index = IntegerList(ht@row_order_list[[j_slice]]), 
+                                                          column_index = IntegerList(intersect(ht@column_order_list[[j_slice]], ci))))
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    if(is.null(df)) return(df)
+    
+    ndf = nrow(df)
+    if(all && !is.null(df)) {
+      for(i in seq_along(ht_list@ht_list)) {
+        ht_name = ht_list@ht_list[[i]]@name
+        ht = ht_list@ht_list[[ht_name]]
+        if(inherits(ht, "Heatmap")) {
+          for(idf in seq_len(ndf)) {
+            if(!ht_name %in% df$heatmap[idf]) {
+              if(ht_list@direction == "horizontal") {
+                if(!is.null(row_keywords)) {
+                  for(j_slice in seq_along(ht@column_order_list)) {
+                    i_slice = df$row_slice[idf]
+                    df = rbind(df, S4Vectors::DataFrame(heatmap = ht_name, 
+                                                        slice = qq("@{ht_name}_heatmap_body_@{i_slice}_@{j_slice}"), 
+                                                        row_slice = i_slice,
+                                                        column_slice = j_slice,
+                                                        row_index = df$row_index[idf], 
+                                                        column_index = IntegerList(ht@column_order_list[[j_slice]])))
+                  }
+                }
+              } else {
+                if(!is.null(column_keywords)) {
+                  for(i_slice in seq_along(ht@row_order_list)) {
+                    j_slice = df$column_slice[idf]
+                    df = rbind(df, S4Vectors::DataFrame(heatmap = ht_name, 
+                                                        slice = qq("@{ht_name}_heatmap_body_@{i_slice}_@{j_slice}"), 
+                                                        row_slice = i_slice,
+                                                        column_slice = j_slice,
+                                                        row_index = IntegerList(ht@row_order_list[[j_slice]]), 
+                                                        column_index = df$column_index[idf]))
+                  }
+                }
+              }
+            }
+          }
+        } else {
+          if(include_annotation) {
+            df = rbind(df, S4Vectors::DataFrame(heatmap = ht_name, 
+                                                slice = NA, 
+                                                row_slice = NA,
+                                                column_slice = NA,
+                                                row_index = IntegerList(integer(0)), 
+                                                column_index = IntegerList(integer(0))))
+          }
+        }
+      }
+    }
+  }
+  df = reformat_df(df, ht_list)
+  
+  df$row_label = rep(CharacterList(character(0)), nrow(df))
+  df$column_label = rep(CharacterList(character(0)), nrow(df))
+  for(i in seq_len(nrow(df))) {
+    ht = ht_list@ht_list[[df[i, "heatmap"]]]
+    row_index = df[, "row_index"][[i]]
+    column_index = df[, "column_index"][[i]]
+    row_label = rownames(ht@matrix)[row_index]
+    column_label = colnames(ht@matrix)[column_index]
+    if(is.null(row_label)) row_label = rep(NA_character_, length(row_index))
+    if(is.null(column_label)) column_label = rep(NA_character_, length(column_index))
+    
+    df$row_label[[i]] = row_label
+    df$column_label[[i]] = column_label
+  }
+  df
 }
 
 reformat_df = function(df, ht_list) {
