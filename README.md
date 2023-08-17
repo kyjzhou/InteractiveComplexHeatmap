@@ -1,5 +1,13 @@
 # Make Interactive Complex Heatmaps
 
+<br>
+
+### **Original InteractiveComplexHeatmap package here: https://github.com/jokergoo/InteractiveComplexHeatmap**
+
+<br>
+<br>
+<br>
+
 [![R-CMD-check](https://github.com/jokergoo/InteractiveComplexHeatmap/workflows/R-CMD-check/badge.svg)](https://github.com/jokergoo/InteractiveComplexHeatmap/actions)
 [![bioc](http://www.bioconductor.org/shields/downloads/devel/InteractiveComplexHeatmap.svg)](https://bioconductor.org/packages/stats/bioc/InteractiveComplexHeatmap/) 
 [![bioc](http://www.bioconductor.org/shields/years-in-bioc/InteractiveComplexHeatmap.svg)](http://bioconductor.org/packages/devel/bioc/html/InteractiveComplexHeatmap.html)
