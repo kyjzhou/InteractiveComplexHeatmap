@@ -627,8 +627,8 @@ makeInteractiveComplexHeatmap = function(input, output, session, ht_list,
 			req(heatmap_initialized())
 
 			updateCheckboxInput(session, qq("@{heatmap_id}_remove_empty_checkbox"), value = FALSE)
-			panel_type = input[[qq("@{heatmap_id}_search_panel_type")]]
-			if(input[[qq("@{heatmap_id}_keyword")]] == "" & !is_valid_panel_type(panel_type)) {
+			
+			if(input[[qq("@{heatmap_id}_keyword")]] == "" & input[[qq("@{heatmap_id}_search_panel_type")]] == "") {
 				output[[qq("@{heatmap_id}_sub_heatmap")]] = renderPlot({
 					grid.newpage()
 					grid.text("Query keyword is empty.", 0.5, 0.5, gp = gpar(fontsize = 14, col = "red"))
@@ -657,6 +657,7 @@ makeInteractiveComplexHeatmap = function(input, output, session, ht_list,
 			is_regexpr = input[[qq("@{heatmap_id}_search_regexpr")]]
 			sht = input[[qq("@{heatmap_id}_search_heatmaps")]]
 			extend = input[[qq("@{heatmap_id}_search_extend")]]
+			panel_type = input[[qq("@{heatmap_id}_search_panel_type")]]
 
 			if(length(sht) == 0) {
 				output[[qq("@{heatmap_id}_sub_heatmap")]] = renderPlot({
